@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Letter</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --envelope-color: #e0d4c3;
+            --flap-color: #d1c2ae;
+            --paper-color: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .creator-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .creator-panel h2 { margin-top: 0; font-size: 18px; color: #333; text-align: center; }
+        textarea {
+            width: 100%; height: 80px; padding: 10px; border: 1px solid #ddd;
+            border-radius: 8px; resize: none; box-sizing: border-box; font-size: 14px;
+        }
+        .bg-selector { margin: 15px 0; font-size: 14px; color: #555; }
+        select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ddd; }
+        .btn-generate, .btn-copy {
+            width: 100%; padding: 10px; background-color: #4CAF50; color: white;
+            border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+        }
+        .btn-generate:hover { background-color: #45a049; }
+        .link-output-box {
+            margin-top: 15px; padding: 10px; background: #f0f9f0; border: 1px dashed #4CAF50; border-radius: 8px;
+        }
+        .link-output-box p { margin: 0 0 5px 0; font-size: 12px; color: #2e7d32; }
+        #shareUrl { width: 100%; padding: 6px; margin-bottom: 8px; box-sizing: border-box; text-align: center; }
+
+        .envelope-wrapper { position: relative; cursor: pointer; margin-top: 20px; }
+        .envelope {
+            position: relative; width: 300px; height: 200px;
+            background-color: var(--envelope-color); border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .flap {
+            position: absolute; top: 0; width: 0; height: 0;
+            border-left: 150px solid transparent; border-right: 150px solid transparent;
+            border-top: 100px solid var(--flap-color); transform-origin: top;
+            transition: transform 0.4s ease, z-index 0.2s; z-index: 3;
+        }
+        .pocket {
+            position: absolute; bottom: 0; width: 0; height: 0;
+            border-left: 150px solid transparent; border-right: 150px solid transparent;
+            border-bottom: 100px solid var(--envelope-color); z-index: 2;
+        }
+        .letter {
+            position: absolute; bottom: 5px; left: 15px; width: 270px; height: 180px;
+            background-color: var(--paper-color); border-radius: 8px; padding: 15px;
+            box-sizing: border-box; box-shadow: 0 2px 10px rgba(0,0,0,0.05); z-index: 1;
+            transition: transform 0.5s ease;
+        }
+        .letter-content { font-size: 14px; color: #333; line-height: 1.4; word-wrap: break-word; }
+
+        .envelope-wrapper.open .flap { transform: rotateX(180deg); z-index: 0; }
+        .envelope-wrapper.open .letter { transform: translateY(-110px); z-index: 4; }
+
+        .hint { text-align: center; color: #888; margin-top: 15px; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- กล่องพิมพ์สร้างจดหมาย -->
+        <div class="creator-panel" id="creatorPanel">
+            <h2>✉️ สร้างจดหมายลับของคุณ</h2>
+            <textarea id="textInput" placeholder="พิมพ์ข้อความที่อยากบอกตรงนี้เลย..."></textarea>
+            
+            <div class="bg-selector">
+                <label>เลือกโทนสีพื้นหลัง:</label>
+                <select id="bgSelect">
+                    <option value="pastel-pink">🌸 ชมพูพาสเทล</option>
+                    <option value="pastel-blue">🐳 ฟ้าพาสเทล</option>
+                    <option value="dark-minimal">🖤 ดาร์กมินิมอล</option>
+                </select>
+            </div>
+            
+            <button onclick="generateLink()" class="btn-generate">🔗 สร้างลิงก์ส่งให้เพื่อน</button>
+            
+            <div id="linkOutputContainer" class="link-output-box" style="display: none;">
+                <p>สร้างลิงก์สำเร็จ! ก๊อปปี้ส่งให้เพื่อนได้เลย:</p>
+                <input type="text" id="shareUrl" readonly onclick="this.select()">
+                <button onclick="copyToClipboard()" class="btn-copy">📋 คัดลอกลิงก์</button>
+            </div>
+        </div>
+
+        <!-- ซองจดหมายอนิเมชั่น -->
+        <div class="envelope-wrapper" id="envelopeWrapper">
+            <div class="envelope" onclick="toggleLetter()">
+                <div class="flap"></div>
+                <div class="pocket"></div>
+                
+                <div class="letter" id="letterCard">
+                    <div class="letter-content">
+                        <p id="letterText">กำลังโหลดข้อความลับ...</p>
+                    </div>
+                </div>
+            </div>
+            <p class="hint" id="hintText">✨ คลิกที่ซองเพื่อเปิดจดหมาย ✨</p>
+        </div>
+    </div>
+
+    <script>
+        function toggleLetter() {
+            const wrapper = document.getElementById('envelopeWrapper');
+            const hint = document.getElementById('hintText');
+            if (wrapper.classList.contains('open')) {
+                wrapper.classList.remove('open');
+                hint.innerText = "✨ คลิกที่ซองเพื่อเปิดจดหมาย ✨";
+            } else {
+                wrapper.classList.add('open');
+                hint.innerText = "✨ คลิกที่ซองอีกครั้งเพื่อเก็บจดหมาย ✨";
+            }
+        }
+
+        function generateLink() {
+            const textInput = document.getElementById('textInput').value;
+            if(!textInput) { alert("กรุณาพิมพ์ข้อความก่อนสร้างลิงก์นะครับ"); return; }
+            const textEncoded = encodeURIComponent(textInput);
+            const bgSelected = document.getElementById('bgSelect').value;
+            const currentUrl = window.location.href.split('?')[0];
+            const finalLink = `${currentUrl}?msg=${textEncoded}&bg=${bgSelected}`;
+            
+            document.getElementById('shareUrl').value = finalLink;
+            document.getElementById('linkOutputContainer').style.display = 'block';
+        }
+
+        function copyToClipboard() {
+            const copyText = document.getElementById('shareUrl');
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value);
+            alert("คัดลอกลิงก์เรียบร้อย! 🚀");
+        }
+
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const message = urlParams.get('msg');
+            const bgType = urlParams.get('bg');
+            
+            if (message || bgType) {
+                document.getElementById('creatorPanel').style.display = 'none';
+            }
+            if (message) {
+                document.getElementById('letterText').innerText = decodeURIComponent(message);
+            } else {
+                document.getElementById('letterText').innerText = "ยินดีต้อนรับ! ลองพิมพ์ข้อความด้านบนเพื่อสร้างจดหมายส่งให้เพื่อนดูสิ :)";
+            }
+            if (bgType) {
+                if (bgType === 'pastel-pink') {
+                    document.documentElement.style.setProperty('--bg-color', '#FFE5EC');
+                    document.documentElement.style.setProperty('--paper-color', '#FFF0F5');
+                } else if (bgType === 'pastel-blue') {
+                    document.documentElement.style.setProperty('--bg-color', '#E8F1F5');
+                    document.documentElement.style.setProperty('--paper-color', '#F7FBFC');
+                } else if (bgType === 'dark-minimal') {
+                    document.documentElement.style.setProperty('--bg-color', '#2B2D42');
+                    document.documentElement.style.setProperty('--envelope-color', '#8D99AE');
+                    document.documentElement.style.setProperty('--flap-color', '#738296');
+                    document.documentElement.style.setProperty('--paper-color', '#EDF2F4');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
